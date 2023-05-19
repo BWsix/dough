@@ -1,5 +1,9 @@
 # Dough
 
+## About
+
+Built with [interactions.py](https://interactions-py.github.io/interactions.py/Guides/).
+
 ## Installation
 
 ### 1. invite the bot to your server
