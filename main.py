@@ -37,4 +37,10 @@ async def my_command_function(ctx: interactions.SlashContext):
     await form_ctx.send("Uploaded!", ephemeral=True)
 
 
+@interactions.listen(interactions.api.events.Startup)
+async def on_startup(event: interactions.api.events.Startup):
+    bot_name = event.bot.user.username
+    print(f"[{bot_name}] Ready!")
+
+
 bot.start(config["TOKEN"])
