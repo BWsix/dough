@@ -2,13 +2,26 @@ import interactions
 from dotenv import dotenv_values
 
 bot = interactions.Client()
-
 config = dotenv_values(".env")
+
 assert "TOKEN" in config
+TOKEN = config["TOKEN"]
+TARGET_CHANNEL = int(config["TARGET_CHANNEL"]) if "TARGET_CHANNEL" in config else None
 
 
-@interactions.slash_command(name="upload", description="Upload Anonymously")
-async def my_command_function(ctx: interactions.SlashContext):
+@interactions.slash_command(
+    name="upload",
+    description="Upload Anonymously",
+    dm_permission=False,
+)
+async def upload_anonymously(ctx: interactions.SlashContext):
+    if TARGET_CHANNEL and ctx.channel.id != TARGET_CHANNEL:
+        channel = await ctx.guild.fetch_channel(TARGET_CHANNEL)
+        return await ctx.send(
+            f"Please use this command in {channel.mention}!",
+            ephemeral=True,
+        )
+
     form = interactions.Modal(
         interactions.ParagraphText(
             label="Description",
