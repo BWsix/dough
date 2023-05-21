@@ -1,3 +1,6 @@
+import io
+
+import aiohttp
 import interactions
 from dotenv import dotenv_values
 
@@ -11,10 +14,19 @@ TARGET_CHANNEL = int(config["TARGET_CHANNEL"]) if "TARGET_CHANNEL" in config els
 
 @interactions.slash_command(
     name="upload",
-    description="Upload Anonymously",
+    description="Upload Anonymously.",
     dm_permission=False,
 )
-async def upload_anonymously(ctx: interactions.SlashContext):
+@interactions.slash_option(
+    name="image_attachment",
+    description="Paste your image here!",
+    required=True,
+    opt_type=interactions.OptionType.ATTACHMENT,
+)
+async def upload_anonymously(
+    ctx: interactions.SlashContext,
+    image_attachment: interactions.Attachment = None,
+):
     if TARGET_CHANNEL and ctx.channel.id != TARGET_CHANNEL:
         channel = await ctx.guild.fetch_channel(TARGET_CHANNEL)
         return await ctx.send(
@@ -29,24 +41,28 @@ async def upload_anonymously(ctx: interactions.SlashContext):
             custom_id="description",
             required=True,
         ),
-        interactions.ShortText(
-            label="Image URL",
-            placeholder="Enter an image URL",
-            custom_id="image_url",
-            required=False,
-        ),
         title="Upload Anonymously",
     )
     await ctx.send_modal(modal=form)
 
     form_ctx: interactions.ModalContext = await ctx.bot.wait_for_modal(form)
     res = form_ctx.responses
-    await form_ctx.channel.send(
-        embed=interactions.Embed(
-            description=res["description"],
-            images=[interactions.EmbedAttachment(url=res["image_url"])],
-        )
-    )
+    async with aiohttp.ClientSession() as session:
+        async with session.get(image_attachment.url) as image_res:
+            if image_res.status != 200:
+                return await form_ctx.send("Could not download image", ephemeral=True)
+
+            image_data = io.BytesIO(await image_res.read())
+
+            await form_ctx.channel.send(
+                content=res["description"],
+                suppress_embeds=True,
+                file=interactions.File(
+                    file=image_data,
+                    file_name=image_attachment.filename,
+                    content_type=image_attachment.content_type,
+                ),
+            )
     await form_ctx.send("Uploaded!", ephemeral=True)
 
 
