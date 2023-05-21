@@ -46,6 +46,10 @@ async def upload_anonymously(
     await ctx.send_modal(modal=form)
 
     form_ctx: interactions.ModalContext = await ctx.bot.wait_for_modal(form)
+    await form_ctx.send(
+        "Received your post! We'll upload it shortly.",
+        ephemeral=True,
+    )
     res = form_ctx.responses
     async with aiohttp.ClientSession() as session:
         async with session.get(image_attachment.url) as image_res:
@@ -63,7 +67,6 @@ async def upload_anonymously(
                     content_type=image_attachment.content_type,
                 ),
             )
-    await form_ctx.send("Uploaded!", ephemeral=True)
 
 
 @interactions.listen(interactions.api.events.Startup)
