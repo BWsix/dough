@@ -26,6 +26,12 @@ Built with [interactions.py](https://interactions-py.github.io/interactions.py/G
 5. rename `.env.example` to `.env` and paste the **TOKEN** into the file
 6. run the bot by running `python main.py`
 
+## Updating
+
+1. cd into the directory by running `cd dough`
+2. pull the latest changes by running `git pull`
+3. install the dependencies by running `pip install -r requirements.txt`
+
 ## Usage
 
-`/upload` - upload rips anonymously
+`/upload [image]` - upload rips anonymously
