@@ -32,6 +32,10 @@ Built with [interactions.py](https://interactions-py.github.io/interactions.py/G
 2. pull the latest changes by running `git pull`
 3. install the dependencies by running `pip install -r requirements.txt`
 
+or
+
+1. execute the update script by running `update`
+
 ## Usage
 
 `/upload [image]` - upload rips anonymously
