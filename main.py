@@ -17,10 +17,12 @@ GUILD_ID = int(config["GUILD_ID"])
 assert "UPLOAD_SHARING_CHANNEL_ID" in config
 assert "OST_SHARING_CHANNEL_ID" in config
 assert "MISC_SHARING_CHANNEL_ID" in config
+assert "UPLOAD_REQUEST_CHANNEL_ID" in config
 CHANNELS = {
     "#upload-sharing": int(config["UPLOAD_SHARING_CHANNEL_ID"]),
     "#ost-sharing": int(config["OST_SHARING_CHANNEL_ID"]),
     "#misc-sharing": int(config["MISC_SHARING_CHANNEL_ID"]),
+    "#upload-request": int(config["UPLOAD_REQUEST_CHANNEL_ID"]),
 }
 
 
@@ -54,10 +56,17 @@ CHANNELS = {
         ),
     ],
 )
+@interactions.slash_option(
+    name="fulfilled_request_link",
+    description="Paste the link to the fulfilled request here",
+    required=False,
+    opt_type=interactions.OptionType.STRING,
+)
 async def upload_anonymously(
     ctx: interactions.SlashContext,
     image_attachment: interactions.Attachment = None,
     upload_channel: Union[str, None] = "#upload-sharing",
+    fulfilled_request_link: Union[str, None] = None,
 ):
     form = interactions.Modal(
         interactions.ParagraphText(
@@ -98,8 +107,29 @@ async def upload_anonymously(
 
     guild = bot.get_guild(GUILD_ID)
     channel = guild.get_channel(CHANNELS[upload_channel])
+    request_channel = guild.get_channel(CHANNELS["#upload-request"])
+
+    users_to_ping = ""
+    if fulfilled_request_link:
+        try:
+            request_message_id = int(fulfilled_request_link.split("/")[-1])
+            request_message = await request_channel.fetch_message(request_message_id)
+            reacted_users: interactions.ReactionUsers = {
+                r.emoji.name: r.users for r in request_message.reactions
+            }["pingme"]()
+            users = await reacted_users.fetch()
+            users_to_ping = "".join([u.mention for u in users])
+        except Exception as error:
+            print("Error while parsing the link.")
+            print(error)
+            await ctx.send(
+                "Error while parsing the link. Skip pinging users and continue with the upload.\n"
+                + f"Link you provided: {fulfilled_request_link}",
+                ephemeral=True,
+            )
+
     anonymous_post_message = await channel.send(
-        content=description,
+        content=f"{description}\n{users_to_ping}",
         file=image,
         suppress_embeds=True,
     )
@@ -135,10 +165,21 @@ async def upload_anonymously(
 @interactions.listen(interactions.api.events.Startup)
 async def on_startup(event: interactions.api.events.Startup):
     bot_name = event.bot.user.username
-    guild = await event.bot.fetch_guild(GUILD_ID)
-
     print(f"[{bot_name}] Ready")
-    print(f"[{bot_name}] Guild: {guild.name}")
+
+    guild = await event.bot.fetch_guild(GUILD_ID)
+    assert guild
+    print(f"[{bot_name}] Server: {guild.name}")
+
+    assert guild.get_channel(CHANNELS["#upload-request"])
+    assert guild.get_channel(CHANNELS["#upload-sharing"])
+    assert guild.get_channel(CHANNELS["#misc-sharing"])
+    assert guild.get_channel(CHANNELS["#upload-request"])
+    print(f"[{bot_name}] Found all target channels")
+
+    emojis = await guild.fetch_all_custom_emojis()
+    assert "pingme" in [emoji.name for emoji in emojis]
+    print(f"[{bot_name}] Found :pingme: emoji")
 
 
 bot.start(TOKEN)
