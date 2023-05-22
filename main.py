@@ -1,5 +1,6 @@
 import asyncio
 import io
+from typing import Union
 
 import aiohttp
 import interactions
@@ -12,8 +13,15 @@ assert "TOKEN" in config
 TOKEN = config["TOKEN"]
 assert "GUILD_ID" in config
 GUILD_ID = int(config["GUILD_ID"])
-assert "CHANNEL_ID" in config
-CHANNEL_ID = int(config["CHANNEL_ID"])
+
+assert "UPLOAD_SHARING_CHANNEL_ID" in config
+assert "OST_SHARING_CHANNEL_ID" in config
+assert "MISC_SHARING_CHANNEL_ID" in config
+CHANNELS = {
+    "#upload-sharing": int(config["UPLOAD_SHARING_CHANNEL_ID"]),
+    "#ost-sharing": int(config["OST_SHARING_CHANNEL_ID"]),
+    "#misc-sharing": int(config["MISC_SHARING_CHANNEL_ID"]),
+}
 
 
 @interactions.slash_command(
@@ -26,9 +34,30 @@ CHANNEL_ID = int(config["CHANNEL_ID"])
     required=True,
     opt_type=interactions.OptionType.ATTACHMENT,
 )
+@interactions.slash_option(
+    name="upload_channel",
+    description="Select a channel to upload to, defaults to #upload-sharing",
+    required=False,
+    opt_type=interactions.OptionType.STRING,
+    choices=[
+        interactions.SlashCommandChoice(
+            name="#upload-sharing",
+            value="#upload-sharing",
+        ),
+        interactions.SlashCommandChoice(
+            name="#ost-sharing",
+            value="#ost-sharing",
+        ),
+        interactions.SlashCommandChoice(
+            name="#misc-sharing",
+            value="#misc-sharing",
+        ),
+    ],
+)
 async def upload_anonymously(
     ctx: interactions.SlashContext,
     image_attachment: interactions.Attachment = None,
+    upload_channel: Union[str, None] = "#upload-sharing",
 ):
     form = interactions.Modal(
         interactions.ParagraphText(
@@ -68,7 +97,7 @@ async def upload_anonymously(
             )
 
     guild = bot.get_guild(GUILD_ID)
-    channel = guild.get_channel(CHANNEL_ID)
+    channel = guild.get_channel(CHANNELS[upload_channel])
     anonymous_post_message = await channel.send(
         content=description,
         file=image,
@@ -107,11 +136,9 @@ async def upload_anonymously(
 async def on_startup(event: interactions.api.events.Startup):
     bot_name = event.bot.user.username
     guild = await event.bot.fetch_guild(GUILD_ID)
-    channel = await event.bot.fetch_channel(CHANNEL_ID)
 
     print(f"[{bot_name}] Ready")
     print(f"[{bot_name}] Guild: {guild.name}")
-    print(f"[{bot_name}] Channel: {channel.name}")
 
 
 bot.start(TOKEN)
