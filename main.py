@@ -38,8 +38,8 @@ CHANNELS = {
 )
 @interactions.slash_option(
     name="upload_channel",
-    description="Select a channel to upload to, defaults to #upload-sharing",
-    required=False,
+    description="Select a channel to upload to",
+    required=True,
     opt_type=interactions.OptionType.STRING,
     choices=[
         interactions.SlashCommandChoice(
@@ -64,8 +64,8 @@ CHANNELS = {
 )
 async def upload_anonymously(
     ctx: interactions.SlashContext,
-    image_attachment: interactions.Attachment = None,
-    upload_channel: Union[str, None] = "#upload-sharing",
+    image_attachment: interactions.Attachment,
+    upload_channel: str,
     fulfilled_request_link: Union[str, None] = None,
 ):
     form = interactions.Modal(
