@@ -34,8 +34,27 @@ Built with [interactions.py](https://interactions-py.github.io/interactions.py/G
 
 or
 
-1. execute the update script by running `update`
+1. open `/scripts` in file explorer and double click `update.bat`
 
-## Usage
+## Running the bot 24/7 in the background
+
+[pm2](https://www.npmjs.com/package/pm2) is a process manager for Node.js applications. It allows you to keep applications alive forever, to reload them without downtime and to facilitate common system admin tasks.
+
+### Installation
+
+1. install pm2 by running `npm install pm2 -g`
+
+### Usage
+
+1. cd into the directory by running `cd dough`
+2. start the bot by running `pm2 start main.py  --name discord-bot`
+3. stop the bot by running `pm2 stop discord-bot`
+4. monitor the bot by running `pm2 monit`
+
+or
+
+1. open `/scripts` in file explorer and double click `start.bat` / `stop.bat` / `monitor.bat`
+
+## Bot Usage
 
 `/upload [image]` - upload rips anonymously
