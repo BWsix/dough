@@ -47,7 +47,7 @@ or
 ### Usage
 
 1. cd into the directory by running `cd dough`
-2. start the bot by running `pm2 start main.py  --name discord-bot`
+2. start the bot by running `pm2 start main.py --name discord-bot`
 3. stop the bot by running `pm2 stop discord-bot`
 4. monitor the bot by running `pm2 monit`
 
