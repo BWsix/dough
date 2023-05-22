@@ -1,3 +1,4 @@
+import asyncio
 import io
 
 import aiohttp
@@ -45,34 +46,73 @@ async def upload_anonymously(
     )
     await ctx.send_modal(modal=form)
 
-    form_ctx: interactions.ModalContext = await ctx.bot.wait_for_modal(form)
-    await form_ctx.send(
-        "Received your post! We'll upload it shortly.",
+    form_ctx: interactions.ModalContext = await ctx.bot.wait_for_modal(
+        form,
+        author=ctx.author,
+    )
+    # must reply to the modal context
+    loading_message: interactions.Message = await form_ctx.send(
+        "Processing...",
         ephemeral=True,
     )
-    res = form_ctx.responses
+
+    description = form_ctx.responses["description"]
+    image: interactions.File = None
     async with aiohttp.ClientSession() as session:
         async with session.get(image_attachment.url) as image_res:
             if image_res.status != 200:
-                return await form_ctx.send("Could not download image", ephemeral=True)
-
+                return await ctx.send(
+                    "Could not download image",
+                    ephemeral=True,
+                )
             image_data = io.BytesIO(await image_res.read())
-
-            await form_ctx.channel.send(
-                content=res["description"],
-                suppress_embeds=True,
-                file=interactions.File(
-                    file=image_data,
-                    file_name=image_attachment.filename,
-                    content_type=image_attachment.content_type,
-                ),
+            image = interactions.File(
+                file=image_data,
+                file_name=image_attachment.filename,
+                content_type=image_attachment.content_type,
             )
+
+    anonymous_post_message = await ctx.channel.send(
+        content=description,
+        file=image,
+        suppress_embeds=True,
+    )
+    await loading_message.delete(context=ctx)
+
+    delete_button = interactions.Button(
+        style=interactions.ButtonStyle.RED,
+        label="Delete Post",
+    )
+    delete_confirmation_message = await ctx.send(
+        "In case you want to delete your post, click the button below within 5 minutes.",
+        components=delete_button,
+        ephemeral=True,
+    )
+
+    try:
+        await ctx.bot.wait_for_component(
+            components=delete_button,
+            timeout=60 * 5,
+        )
+        await anonymous_post_message.delete(context=ctx)
+        await delete_confirmation_message.delete(context=ctx)
+        await ctx.send(
+            "Post deleted.",
+            ephemeral=True,
+        )
+    except asyncio.TimeoutError:
+        await delete_confirmation_message.delete(context=ctx)
 
 
 @interactions.listen(interactions.api.events.Startup)
 async def on_startup(event: interactions.api.events.Startup):
     bot_name = event.bot.user.username
-    print(f"[{bot_name}] Ready!")
+    print(f"[{bot_name}] Ready")
+
+    if TARGET_CHANNEL:
+        channel = await event.bot.fetch_channel(TARGET_CHANNEL)
+        print(f"[{bot_name}] Channel restriction enabled")
+        print(f"[{bot_name}] Target channel: {channel.name}")
 
 
-bot.start(config["TOKEN"])
+bot.start(TOKEN)
