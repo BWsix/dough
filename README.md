@@ -23,7 +23,7 @@ Built with [interactions.py](https://interactions-py.github.io/interactions.py/G
 2. clone the repository by running `git clone https://github.com/BWsix/dough.git`
 3. cd into the directory by running `cd dough`
 4. install the dependencies by running `pip install -r requirements.txt`
-5. rename `.env.example` to `.env` and paste the **TOKEN** into the file
+5. rename `.env.example` to `.env` and paste the **TOKEN**, **GUILD_ID** and **CHANNEL_ID** into the file
 6. run the bot by running `python main.py`
 
 ## Updating
@@ -57,4 +57,4 @@ or
 
 ## Bot Usage
 
-`/upload [image]` - upload rips anonymously
+(in dm) `/upload [image]` - upload rips anonymously
