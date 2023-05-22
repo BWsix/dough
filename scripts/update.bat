@@ -1,2 +1,1 @@
-cd ..
-git pull && pip install -r requirements.txt && cls && echo Update complete.
+cd .. && git pull && pip install -r requirements.txt && cd scripts && start.bat
