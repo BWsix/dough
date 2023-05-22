@@ -10,13 +10,15 @@ config = dotenv_values(".env")
 
 assert "TOKEN" in config
 TOKEN = config["TOKEN"]
-TARGET_CHANNEL = int(config["TARGET_CHANNEL"]) if "TARGET_CHANNEL" in config else None
+assert "GUILD_ID" in config
+GUILD_ID = int(config["GUILD_ID"])
+assert "CHANNEL_ID" in config
+CHANNEL_ID = int(config["CHANNEL_ID"])
 
 
 @interactions.slash_command(
     name="upload",
     description="Upload Anonymously.",
-    dm_permission=False,
 )
 @interactions.slash_option(
     name="image_attachment",
@@ -28,13 +30,6 @@ async def upload_anonymously(
     ctx: interactions.SlashContext,
     image_attachment: interactions.Attachment = None,
 ):
-    if TARGET_CHANNEL and ctx.channel.id != TARGET_CHANNEL:
-        channel = await ctx.guild.fetch_channel(TARGET_CHANNEL)
-        return await ctx.send(
-            f"Please use this command in {channel.mention}!",
-            ephemeral=True,
-        )
-
     form = interactions.Modal(
         interactions.ParagraphText(
             label="Description",
@@ -72,7 +67,9 @@ async def upload_anonymously(
                 content_type=image_attachment.content_type,
             )
 
-    anonymous_post_message = await ctx.channel.send(
+    guild = bot.get_guild(GUILD_ID)
+    channel = guild.get_channel(CHANNEL_ID)
+    anonymous_post_message = await channel.send(
         content=description,
         file=image,
         suppress_embeds=True,
@@ -84,7 +81,9 @@ async def upload_anonymously(
         label="Delete Post",
     )
     delete_confirmation_message = await ctx.send(
-        "In case you want to delete your post, click the button below within 5 minutes.",
+        "The post has been uploaded to the server.\n"
+        + f"Link: {anonymous_post_message.jump_url}\n"
+        + "In case you want to delete your post, click the button below within 5 minutes.",
         components=delete_button,
         ephemeral=True,
     )
@@ -107,12 +106,12 @@ async def upload_anonymously(
 @interactions.listen(interactions.api.events.Startup)
 async def on_startup(event: interactions.api.events.Startup):
     bot_name = event.bot.user.username
-    print(f"[{bot_name}] Ready")
+    guild = await event.bot.fetch_guild(GUILD_ID)
+    channel = await event.bot.fetch_channel(CHANNEL_ID)
 
-    if TARGET_CHANNEL:
-        channel = await event.bot.fetch_channel(TARGET_CHANNEL)
-        print(f"[{bot_name}] Channel restriction enabled")
-        print(f"[{bot_name}] Target channel: {channel.name}")
+    print(f"[{bot_name}] Ready")
+    print(f"[{bot_name}] Guild: {guild.name}")
+    print(f"[{bot_name}] Channel: {channel.name}")
 
 
 bot.start(TOKEN)
