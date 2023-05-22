@@ -1,1 +1,1 @@
-cd .. && git pull && pip install -r requirements.txt && cls && echo After configuring the bot, run scripts\restart.bat to restart the bot. && pause
+cd .. && git pull && pip install -r requirements.txt && cls && echo After configuring the bot, run scripts\restart.bat to restart the bot. Also, please run scripts\monitor.bat to make sure there's only one instance of the bot running! && pause
