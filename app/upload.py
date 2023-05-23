@@ -33,22 +33,30 @@ class UploadExtension(interactions.Extension):
 
     guild: interactions.Guild
     upload_request_channel: interactions.TYPE_GUILD_CHANNEL
-    upload_form_modal = interactions.Modal(
-        interactions.ParagraphText(
-            label="Description",
-            placeholder="Description of the upload",
-            custom_id="description",
-            required=True,
-        ),
-        title="Upload Anonymously",
-    )
     confirmation_message_action_row = interactions.ActionRow(
+        interactions.Button(
+            style=interactions.ButtonStyle.BLURPLE,
+            label="Edit Description",
+            custom_id="btn:edit_description",
+        ),
         interactions.Button(
             style=interactions.ButtonStyle.RED,
             label="Delete Post",
             custom_id="btn:delete_post",
         ),
     )
+
+    def get_description_form_modal(self, value=""):
+        return interactions.Modal(
+            interactions.ParagraphText(
+                label="Description",
+                placeholder="Description of the upload",
+                custom_id="description",
+                required=True,
+                value=value,
+            ),
+            title="Upload Anonymously",
+        )
 
     @interactions.listen(interactions.api.events.Startup)
     async def on_startup(self, event: interactions.api.events.Startup):
@@ -98,9 +106,10 @@ class UploadExtension(interactions.Extension):
         fulfilled_request_link: Union[str, None] = None,
     ):
         # form handler
-        await ctx.send_modal(modal=self.upload_form_modal)
+        upload_form = self.get_description_form_modal()
+        await ctx.send_modal(modal=upload_form)
         upload_form_ctx = await ctx.bot.wait_for_modal(
-            self.upload_form_modal,
+            upload_form,
             author=ctx.author,
         )
         form_loading_message = await upload_form_ctx.send(
@@ -133,30 +142,57 @@ class UploadExtension(interactions.Extension):
         # send confirmation message
         await ctx.send(
             "The post has been uploaded to the server."
-            + f"\nLink: {anonymous_post_message.jump_url}"
-            + "\nYou can delete the post by clicking the button below.",
+            + f"\nLink: {anonymous_post_message.jump_url}",
             components=[self.confirmation_message_action_row],
             ephemeral=True,
         )
 
-    @interactions.component_callback("btn:delete_post")
-    async def delete_post(self, ctx: interactions.ComponentContext):
-        link = re.search(r"(?P<url>https?://[^\s]+)", ctx.message.content).group("url")
+    async def get_anonymous_post(
+        self, confirmation_callback_ctx: interactions.ComponentContext
+    ):
+        content = confirmation_callback_ctx.message.content
+        link = re.search(r"(?P<url>https?://[^\s]+)", content).group("url")
         channel_id = int(link.split("/")[-2])
         message_id = int(link.split("/")[-1])
         upload_channel = self.guild.get_channel(channel_id)
-
         anonymous_post_message = await upload_channel.fetch_message(message_id)
-        if anonymous_post_message:
-            await anonymous_post_message.delete(context=ctx)
-            await ctx.send("Post deleted.", ephemeral=True)
-        else:
-            await ctx.send(
+
+        if not anonymous_post_message:
+            await confirmation_callback_ctx.send(
                 "Post not found, it may have already been deleted by admins.",
                 ephemeral=True,
             )
 
+        return anonymous_post_message
+
+    @interactions.component_callback("btn:delete_post")
+    async def delete_post(self, ctx: interactions.ComponentContext):
+        anonymous_post_message = await self.get_anonymous_post(ctx)
+        if not anonymous_post_message:
+            return
+
+        await anonymous_post_message.delete(context=ctx)
+        await ctx.send("Post deleted.", ephemeral=True)
         await ctx.message.delete(context=ctx)
+
+    @interactions.component_callback("btn:edit_description")
+    async def edit_discription(self, ctx: interactions.ComponentContext):
+        anonymous_post_message = await self.get_anonymous_post(ctx)
+        if not anonymous_post_message:
+            return
+
+        # form handler
+        form_modal = self.get_description_form_modal(anonymous_post_message.content)
+        await ctx.send_modal(modal=form_modal)
+        form_ctx = await ctx.bot.wait_for_modal(
+            form_modal,
+            author=ctx.author,
+        )
+
+        # update description
+        description = form_ctx.responses["description"]
+        await anonymous_post_message.edit(content=description)
+        await form_ctx.send("Description updated.", ephemeral=True)
 
     async def fetch_requested_users(self, fulfilled_request_link: str) -> str:
         """Fetches and composes a string of users to ping from the fulfilled request link."""
