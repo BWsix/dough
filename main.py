@@ -1,6 +1,6 @@
 import interactions
-import app.config
 
+import app.config
 
 config = app.config.Config()
 bot = interactions.Client(
@@ -28,6 +28,12 @@ async def on_startup(event: interactions.api.events.Startup):
     emojis = await guild.fetch_all_custom_emojis()
     assert "pingme" in [emoji.name for emoji in emojis]
     print("Found :pingme: emoji")
+
+
+@interactions.listen(interactions.api.events.Disconnect)
+async def on_disconnect(event: interactions.api.events.Disconnect):
+    event.bot.ws.close()
+    print("Bot is offline")
 
 
 bot.load_extension("app.upload")
