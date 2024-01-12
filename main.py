@@ -1,40 +1,47 @@
+import app.config
+import typing
+import asyncio
 import interactions
 
-import app.config
-
 config = app.config.Config()
-bot = interactions.Client(
-    send_command_tracebacks=config.dev,
-    send_not_ready_messages=True,
-)
 
 
-@interactions.listen(interactions.api.events.Startup)
+@interactions.listen()
 async def on_startup(event: interactions.api.events.Startup):
-    """Global startup configuration"""
-    bot_name = event.bot.user.username
-    print(f"{bot_name} Ready")
+    bot = typing.cast(interactions.Client, event.bot)
+    print(f"Bot: {bot.user.username}")
 
-    guild = await event.bot.fetch_guild(config.guild_id)
+    guild = await bot.fetch_guild(config.guild_id)
     assert guild
+    config.guild = guild
     print(f"Server: {guild.name}")
 
-    assert guild.get_channel(config.channels["#upload-request"])
-    assert guild.get_channel(config.channels["#upload-sharing"])
-    assert guild.get_channel(config.channels["#misc-sharing"])
-    assert guild.get_channel(config.channels["#upload-request"])
-    print("Found all target channels")
+    for channel_name, channel_id in config.channel_ids.items():
+        print(f"Searching for {channel_name}")
+        channel = guild.get_channel(channel_id)
+        assert isinstance(channel, interactions.GuildText)
+        config.set_channel(channel_name, channel)
+        print(f"...Found {channel_name}.")
 
+    print("Searching for :pingme:")
     emojis = await guild.fetch_all_custom_emojis()
     assert "pingme" in [emoji.name for emoji in emojis]
-    print("Found :pingme: emoji")
+    print("...Found :pingme:")
 
 
-@interactions.listen(interactions.api.events.Disconnect)
+@interactions.listen()
 async def on_disconnect(event: interactions.api.events.Disconnect):
     event.bot.ws.close()
-    print("Bot is offline")
+    print("Bot is now offline")
 
 
-bot.load_extension("app.upload")
-bot.start(config.bot_token)
+async def startup():
+    bot = interactions.Client(
+        send_command_tracebacks=config.dev,
+        send_not_ready_messages=True,
+    )
+    bot.load_extension("app.upload")
+    await bot.astart(config.bot_token)
+
+if __name__ == "__main__":
+    asyncio.run(startup())
